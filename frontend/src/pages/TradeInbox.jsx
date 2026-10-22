@@ -67,8 +67,8 @@ const TradeInbox = () => {
       {requests.length === 0 ? (
         <p>No {tab} requests.</p>
       ) : (
-        requests.map((req) => (
-          <div key={req._id} style={{ border: "1px solid #ddd", borderRadius: "8px", padding: "1rem", marginBottom: "1rem" }}>
+requests.filter((req) => req.listing).map((req) => (       
+     <div key={req._id} style={{ border: "1px solid #ddd", borderRadius: "8px", padding: "1rem", marginBottom: "1rem" }}>
             <Link to={`/listing/${req.listing._id}`}><strong>{req.listing.title}</strong></Link>
             <p>Type: {req.proposalType}</p>
             {req.proposalType === "buy" ? <p>Offered: ₹{req.offeredPrice}</p> : <p>Offered item: {req.offeredItem}</p>}

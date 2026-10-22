@@ -28,6 +28,10 @@ mongoose.connect(process.env.MONGO_URI)
   })
   .catch((err) => console.error("MongoDB connection error:", err));
 
+  app.use((err, req, res, next) => {
+  res.status(err.status || 400).json({ message: err.message });
+});
+
 app.get("/", (req, res) => {
   res.send("SwapZone API is running");
 });

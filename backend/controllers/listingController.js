@@ -47,6 +47,7 @@ export const createListing = async (req, res) => {
     });
   }
 };
+
 export const getListings = async (req, res) => {
   try {
     const {
@@ -85,7 +86,6 @@ export const getListings = async (req, res) => {
       "name email campus"
     );
 
-    // SORTING
     if (sortBy === "price_asc") {
       listingsQuery = listingsQuery.sort({ price: 1 });
     } else if (sortBy === "price_desc") {
@@ -93,6 +93,7 @@ export const getListings = async (req, res) => {
     } else if (sortBy === "newest") {
       listingsQuery = listingsQuery.sort({ createdAt: -1 });
     }
+
     if (near && campusCoordinates[near]) {
       listingsQuery = Listing.find({
         ...query,
@@ -170,13 +171,13 @@ export const updateListing = async (req, res) => {
       });
     }
 
+   
     const fields = [
       "title",
       "description",
       "category",
       "type",
       "price",
-      "status",
       "campusLocation",
     ];
 
@@ -186,7 +187,6 @@ export const updateListing = async (req, res) => {
       }
     });
 
-    
     if (listing.type !== "sale") {
       listing.price = 0;
     }
@@ -200,6 +200,7 @@ export const updateListing = async (req, res) => {
     });
   }
 };
+
 export const deleteListing = async (req, res) => {
   try {
     const listing = await Listing.findById(req.params.id);

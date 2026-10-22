@@ -1,5 +1,6 @@
 import TradeRequest from "../models/TradeRequest.js";
 import Listing from "../models/Listing.js";
+
 export const createTradeRequest = async (req, res) => {
   try {
     const { listingId, proposalType, offeredItem, offeredPrice, message } = req.body;
@@ -56,25 +57,68 @@ export const getMyReceivedRequests = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
 export const respondToTradeRequest = async (req, res) => {
   try {
     const { status } = req.body; // "Accepted" | "Rejected" | "Completed"
 
+    const allowedStatuses = ["Accepted", "Rejected", "Completed"];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
     const tradeRequest = await TradeRequest.findById(req.params.id).populate("listing");
     if (!tradeRequest) return res.status(404).json({ message: "Trade request not found" });
+
+    if (!tradeRequest.listing) {
+      return res.status(404).json({ message: "This listing no longer exists" });
+    }
 
     if (tradeRequest.listing.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Not authorized to respond to this request" });
     }
 
+
+    const allowedTransitions = {
+      Pending: ["Accepted", "Rejected"],
+      Accepted: ["Completed"],
+    };
+    if (!allowedTransitions[tradeRequest.status]?.includes(status)) {
+      return res.status(400).json({
+        message: `Cannot change a ${tradeRequest.status} request to ${status}`,
+      });
+    }
+
+    const listingId = tradeRequest.listing._id;
+
+    if (status === "Accepted") {
+      const listing = await Listing.findById(listingId);
+      if (listing.status !== "Available") {
+        return res.status(400).json({ message: "This listing is no longer available" });
+      }
+    }
+
     tradeRequest.status = status;
     await tradeRequest.save();
+
     if (status === "Accepted") {
-      await Listing.findByIdAndUpdate(tradeRequest.listing._id, { status: "Pending" });
+      await Listing.findByIdAndUpdate(listingId, { status: "Pending" });
+
+      await TradeRequest.updateMany(
+        { listing: listingId, _id: { $ne: tradeRequest._id }, status: "Pending" },
+        { status: "Rejected" }
+      );
     } else if (status === "Completed") {
-      await Listing.findByIdAndUpdate(tradeRequest.listing._id, { status: "Completed" });
+      await Listing.findByIdAndUpdate(listingId, { status: "Completed" });
     } else if (status === "Rejected") {
-      await Listing.findByIdAndUpdate(tradeRequest.listing._id, { status: "Available" });
+     
+      const otherAccepted = await TradeRequest.exists({
+        listing: listingId,
+        status: "Accepted",
+      });
+      if (!otherAccepted) {
+        await Listing.findByIdAndUpdate(listingId, { status: "Available" });
+      }
     }
 
     res.json(tradeRequest);
